@@ -3,11 +3,17 @@
   "version": "1.0.0",
   "main": "backend/server.js",
   "scripts": {
-    "start": "node backend/server.js"
+    "start": "node backend/server.js",
+    "test": "jest"
   },
   "dependencies": {
     "dotenv": "^16.0.0",
     "express": "^4.19.0",
+    "express-rate-limit": "^8.0.1",
     "openai": "^4.0.0"
+  },
+  "devDependencies": {
+    "jest": "^30.0.5",
+    "supertest": "^7.1.4"
   }
 }
