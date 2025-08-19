@@ -3,6 +3,10 @@ const path = require("path");
 const dotenv = require("dotenv");
 const OpenAI = require("openai");
 
+const model = "gpt-4o-mini";
+const allowedModes = ["summarize", "rephrase", "extract_json", "classify"];
+const toneOptions = ["casual", "professional", "friendly"];
+
 dotenv.config();
 
 if (!process.env.OPENAI_API_KEY) {
@@ -15,10 +19,8 @@ const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const app = express();
 app.use(express.json({ limit: "1mb" }));
 
-// Serve frontend
 app.use(express.static(path.join(__dirname, "../frontend")));
 
-// Single backend endpoint
 app.post("/api/ai", async (req, res) => {
     try {
         const { mode, text, tone } = req.body || {};
@@ -32,62 +34,52 @@ app.post("/api/ai", async (req, res) => {
             return res.status(400).json({ error: "Invalid mode." });
         }
 
-        if (mode === "rephrase" && !["casual", "professional", "friendly"].includes(tone)) {
+        const toneOptions = ["casual", "professional", "friendly"];
+        if (mode === "rephrase" && !toneOptions.includes(tone)) {
             return res.status(400).json({ error: "Tone required for rephrase." });
         }
 
-        const model = "gpt-4o-mini";
-        let messages = [];
-        let response_format;
+        const PROMPT_IDS = {
+            summarize: "pmpt_68a43cd77b5c8196924ff823de21c20d0011ce4641a83e2f",
+            rephrase: {
+                casual: "pmpt_68a43ea19bb88197b3382ee827317e43085b89ff1e451679",
+                professional: "pmpt_68a43ecbf2788193af540d7619ebc9530f9168cea5f8471f",
+                friendly: "pmpt_68a43eff2d5881979ba56ad2209887dd06760801538514c6"
+            },
+            extract_json: "pmpt_68a43f40a4008197b2cea1a8499b50250fbf06e0850b62d0",
+            classify: "pmpt_68a43f40a4008197b2cea1a8499b50250fbf06e0850b62d0"
+        };
 
-        if (mode === "summarize") {
-            messages = [
-                { role: "system", content: "Summarize concisely, keep key facts." },
-                { role: "user", content: text }
-            ];
-        } else if (mode === "rephrase") {
-            messages = [
-                { role: "system", content: "Rephrase faithfully without adding/removing facts." },
-                { role: "user", content: `Rephrase in a ${tone} tone:\n\n${text}` }
-            ];
-        } else if (mode === "extract_json") {
-            response_format = { type: "json_object" };
-            messages = [
-                { role: "system", content: "Extract structured info. Return ONLY JSON." },
-                { role: "user", content: text }
-            ];
-        } else if (mode === "classify") {
-            messages = [
-                { role: "system", content: "Classify sentiment: positive | neutral | negative" },
-                { role: "user", content: text }
-            ];
-        }
+        const selectedPromptId =
+            mode === "rephrase" ? PROMPT_IDS.rephrase[tone] : PROMPT_IDS[mode];
 
-        const completion = await client.chat.completions.create({
-            model,
-            messages,
-            temperature: 0.5,
-            response_format
+        const promptObj = { id: selectedPromptId };
+
+        const response = await client.responses.create({
+            model: "gpt-5",
+            prompt: promptObj,
+            input: text,
         });
 
-        let result = completion.choices[0].message?.content?.trim() || "";
+        const result = response.output_text || "";
 
+        let finalResult = result;
         if (mode === "extract_json") {
             try {
-                result = JSON.stringify(JSON.parse(result), null, 2);
+                finalResult = JSON.stringify(JSON.parse(result), null, 2);
             } catch {
-                result = JSON.stringify({ error: "Invalid JSON", raw: result }, null, 2);
+                finalResult = JSON.stringify({ error: "Invalid JSON", raw: result }, null, 2);
             }
         }
 
         res.json({
             ok: true,
             mode,
-            result,
+            result: finalResult,
             usage: {
-                prompt: completion.usage?.prompt_tokens ?? null,
-                completion: completion.usage?.completion_tokens ?? null,
-                total: completion.usage?.total_tokens ?? null
+                prompt: response.usage?.prompt_tokens ?? null,
+                completion: response.usage?.completion_tokens ?? null,
+                total: response.usage?.total_tokens ?? null
             }
         });
     } catch (err) {
@@ -95,6 +87,7 @@ app.post("/api/ai", async (req, res) => {
         res.status(500).json({ ok: false, error: err.message });
     }
 });
+
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
