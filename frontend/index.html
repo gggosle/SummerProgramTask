@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <title>Mini OpenAI App</title>
+    <style>
+        body { font-family:sans-serif; background:#0b0f19; color:#fff; margin:0; padding:20px; }
+        textarea, select, button { margin:10px 0; width:100%; padding:10px; border-radius:8px; border:1px solid #333; background:#111; color:#fff; }
+        button { cursor:pointer; background:#7c9cff; color:#000; font-weight:bold; }
+        pre { background:#111; padding:15px; border-radius:8px; white-space:pre-wrap; }
+        .hidden { display:none; }
+        .usage { font-size:12px; color:#aaa; margin-top:5px; }
+    </style>
+</head>
+<body>
+<h1>Mini OpenAI App</h1>
+<textarea id="text" maxlength="5000" placeholder="Paste text here..."></textarea>
+
+<label>Mode</label>
+<select id="mode">
+    <option value="summarize">Summarize</option>
+    <option value="rephrase">Rephrase</option>
+    <option value="extract_json">Extract JSON</option>
+    <option value="classify">Classify sentiment</option>
+</select>
+
+<div id="toneWrap" class="hidden">
+    <label>Tone</label>
+    <select id="tone">
+        <option value="casual">Casual</option>
+        <option value="professional">Professional</option>
+        <option value="friendly">Friendly</option>
+    </select>
+</div>
+
+<button id="run">Run</button>
+<button id="copy">Copy result</button>
+
+<pre id="result"></pre>
+<div id="usage" class="usage"></div>
+<div id="error" style="color:#f99;"></div>
+
+<script>
+    const modeEl = document.getElementById("mode");
+    const toneWrap = document.getElementById("toneWrap");
+    const toneEl = document.getElementById("tone");
+    const runBtn = document.getElementById("run");
+    const copyBtn = document.getElementById("copy");
+    const resultEl = document.getElementById("result");
+    const usageEl = document.getElementById("usage");
+    const errorEl = document.getElementById("error");
+
+    modeEl.addEventListener("change", () => {
+        toneWrap.classList.toggle("hidden", modeEl.value !== "rephrase");
+    });
+
+    runBtn.addEventListener("click", async () => {
+        errorEl.textContent = "";
+        resultEl.textContent = "";
+        usageEl.textContent = "";
+
+        const text = document.getElementById("text").value.trim();
+        const mode = modeEl.value;
+        const payload = { mode, text };
+        if (mode === "rephrase") payload.tone = toneEl.value;
+
+        try {
+            const resp = await fetch("/api/ai", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload)
+            });
+            const data = await resp.json();
+            if (!resp.ok) throw new Error(data.error);
+            resultEl.textContent = data.result;
+            usageEl.textContent = `Tokens → prompt: ${data.usage.prompt}, completion: ${data.usage.completion}, total: ${data.usage.total}`;
+        } catch (err) {
+            errorEl.textContent = err.message;
+        }
+    });
+
+    copyBtn.addEventListener("click", async () => {
+        try {
+            await navigator.clipboard.writeText(resultEl.textContent);
+            alert("Copied!");
+        } catch (e) { alert("Copy failed."); }
+    });
+</script>
+</body>
+</html>
