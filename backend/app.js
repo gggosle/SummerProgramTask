@@ -64,7 +64,7 @@ app.post("/api/ai", apiLimiter, async (req, res) => {
             model: "gpt-5",
             prompt: promptObj,
             input: text,
-            max_output_tokens: 12000,
+            max_output_tokens: 10000,
         });
 
         const result = response.output_text;
@@ -93,8 +93,7 @@ app.post("/api/ai", apiLimiter, async (req, res) => {
             }
         });
     } catch (err) {
-        console.error(err);
-        res.status(500).json({ ok: false, error: err.message });
+        res.status(500).json({ ok: false, error: "Something went wrong, try again later" });
     }
 });
 
