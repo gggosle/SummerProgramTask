@@ -40,7 +40,7 @@ describe('/api/ai endpoint', () => {
 
         expect(res.statusCode).toBe(200);
         expect(() => JSON.parse(res.body.result)).not.toThrow();
-    }), timeDelay;
+    }, timeDelay);
 
     it('rate limit path returns 429 after threshold', async () => {
         const threshold = 10;
