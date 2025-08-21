@@ -50,11 +50,18 @@
     const usageEl = document.getElementById("usage");
     const errorEl = document.getElementById("error");
 
+    let isLoading = false;
+
     modeEl.addEventListener("change", () => {
         toneWrap.classList.toggle("hidden", modeEl.value !== "rephrase");
     });
 
     runBtn.addEventListener("click", async () => {
+        if (isLoading) return; // prevent multiple submissions
+        isLoading = true;
+        runBtn.disabled = true;
+        runBtn.textContent = "Running...";
+
         errorEl.textContent = "";
         resultEl.textContent = "";
         usageEl.textContent = "";
@@ -76,6 +83,10 @@
             usageEl.textContent = `Tokens → prompt: ${data.usage.prompt}, completion: ${data.usage.completion}, total: ${data.usage.total}`;
         } catch (err) {
             errorEl.textContent = err.message;
+        } finally {
+            isLoading = false;
+            runBtn.disabled = false;
+            runBtn.textContent = "Run";
         }
     });
 
@@ -86,5 +97,6 @@
         } catch (e) { alert("Copy failed."); }
     });
 </script>
+
 </body>
 </html>
