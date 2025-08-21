@@ -1,6 +1,6 @@
-# SummerProgramTask
+# OpenAIApplication 
 
-A brief description of the project.
+This project is a simple web application that allows users to interact with OpenAI models for text processing tasks such as summarization, rephrasing (with selectable tone), JSON extraction, and sentiment classification. 
 
 ## Prerequisites
 
